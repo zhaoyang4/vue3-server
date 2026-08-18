@@ -1,0 +1,31 @@
+# ===== 构建产物（Maven 编译输出，禁止入库）=====
+target/
+
+# ===== IDE =====
+*.iml
+.idea/
+*.ipr
+*.iws
+*.classpath
+.project
+.settings/
+
+# ===== 日志 =====
+*.log
+*.stacktrace
+spring.log
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+
+# ===== WorkBuddy 项目数据（非代码，不入库）=====
+.workbuddy/
+
+# ===== Spring Boot 自动生成的说明文件 =====
+HELP.md
+
+# ===== 以下必须保留（Maven Wrapper，团队共用）=====
+# mvnw
+# mvnw.cmd
+# .mvn/

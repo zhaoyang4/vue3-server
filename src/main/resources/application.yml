@@ -1,0 +1,35 @@
+# ============================================================
+# Spring Boot 配置文件（YAML 格式，缩进代表层级）
+# ============================================================
+
+server:
+  # 后端服务端口。前端开发时用 5173，后端用 8080，避免冲突。
+  port: 8080
+
+spring:
+  datasource:
+    # JDBC 连接串：localhost 本机，3306 默认端口，vue3_user 是数据库名
+    # 参数说明：
+    #   useUnicode/characterEncoding=utf8 -> 中文不乱码
+    #   serverTimezone=Asia/Shanghai      -> 时区
+    #   useSSL=false                      -> 本地开发关闭 SSL
+    #   allowPublicKeyRetrieval=true      -> 允许获取公钥（MySQL 8 默认密码插件需要）
+    url: jdbc:mysql://localhost:3306/vue3_user?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    # TODO ★★★ 这里改成你本机 MySQL 的 root 密码（我试过 123456/root/admin 都不对，需要你填真实密码）★★★
+    password: root123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    # 打印执行的 SQL 到控制台，方便学习调试；上线可注释掉
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      # 主键策略：数据库自增（配合表里 id AUTO_INCREMENT）
+      id-type: auto
+
+logging:
+  level:
+    # 让本项目的日志级别为 debug，能看到更多细节
+    com.example.userserver: debug
