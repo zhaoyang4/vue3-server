@@ -1,0 +1,18 @@
+# ============================================================
+# 开发环境：连接你本机 MySQL
+# 由 application.yml 里的 spring.profiles.active: dev 默认激活
+# ============================================================
+
+spring:
+  datasource:
+    # JDBC 连接串：localhost 本机，3306 默认端口，vue3_user 是数据库名
+    # 参数说明：
+    #   useUnicode/characterEncoding=utf8 -> 中文不乱码
+    #   serverTimezone=Asia/Shanghai      -> 时区
+    #   useSSL=false                      -> 本地开发关闭 SSL
+    #   allowPublicKeyRetrieval=true      -> 允许获取公钥（MySQL 8 默认密码插件需要）
+    url: jdbc:mysql://localhost:3306/vue3_user?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    # 本机 MySQL 的 root 密码
+    password: root123456
+    driver-class-name: com.mysql.cj.jdbc.Driver

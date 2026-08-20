@@ -1,28 +1,21 @@
 # ============================================================
-# Spring Boot 配置文件（YAML 格式，缩进代表层级）
+# Spring Boot 公共配置（所有环境共享）
+# 环境相关的数据库配置已拆到 application-{env}.yml
 # ============================================================
 
-server:
-  # 后端服务端口。前端开发时用 5173，后端用 8080，避免冲突。
-  port: 8080
-
+# 默认激活 dev 环境：本地直接启动就连本地库，无需额外参数
+# 排查其他环境时覆盖它：--spring.profiles.active=sit
 spring:
-  datasource:
-    # JDBC 连接串：localhost 本机，3306 默认端口，vue3_user 是数据库名
-    # 参数说明：
-    #   useUnicode/characterEncoding=utf8 -> 中文不乱码
-    #   serverTimezone=Asia/Shanghai      -> 时区
-    #   useSSL=false                      -> 本地开发关闭 SSL
-    #   allowPublicKeyRetrieval=true      -> 允许获取公钥（MySQL 8 默认密码插件需要）
-    url: jdbc:mysql://localhost:3306/vue3_user?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    # TODO ★★★ 这里改成你本机 MySQL 的 root 密码（我试过 123456/root/admin 都不对，需要你填真实密码）★★★
-    password: root123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
+  profiles:
+    active: dev
+
+server:
+  # 后端端口，前端 dev 代理 /api -> 8080
+  port: 8080
 
 mybatis-plus:
   configuration:
-    # 打印执行的 SQL 到控制台，方便学习调试；上线可注释掉
+    # 打印执行的 SQL 到控制台，方便排查；生产环境建议注释掉（性能/安全）
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
@@ -31,5 +24,13 @@ mybatis-plus:
 
 logging:
   level:
-    # 让本项目的日志级别为 debug，能看到更多细节
+    # 本项目日志设为 debug，能看到更多细节
     com.example.userserver: debug
+
+# ============================================================
+# 多环境怎么加（不用改本文件）：
+#   1. application-dev.yml   -> 本地开发库（已存在）
+#   2. application-sit.yml   -> 测试环境库，密码用环境变量，别写死
+#   3. application-uat.yml   -> 验收环境库（复制 sit 改地址即可）
+# 切换环境：启动时加 --spring.profiles.active=sit
+# ============================================================
