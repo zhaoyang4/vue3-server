@@ -1,24 +1,10 @@
 -- ============================================================
--- 用户管理模块 - 数据库初始化脚本
--- 执行方式（任选其一）：
---   1) 用 MySQL 客户端命令行：  mysql -u root -p < init.sql
---   2) 用图形化工具（Navicat / Workbench / IDEA Database）打开本文件执行
--- 前提：MySQL 服务已启动；请用你自己的 root 密码连接。
+-- V1: 用户表（幂等写法，重复执行不报错、不丢数据）
+-- Flyway 规则：版本化迁移脚本一旦执行就【不可修改】，
+--   以后要改表结构请新增 V2/V3... 用 ALTER TABLE 增量改。
+-- 命名：V{版本}__{描述}.sql（双下划线分隔）
 -- ============================================================
-
--- 创建数据库（IF NOT EXISTS 保证重复执行不会报错）
-CREATE DATABASE IF NOT EXISTS vue3_user
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
--- 切换到该库
-USE vue3_user;
-
--- 如果表已存在先删掉，方便反复重置（首次执行无影响）
-DROP TABLE IF EXISTS `user`;
-
--- 用户表
-CREATE TABLE `user` (
+CREATE TABLE IF NOT EXISTS `user` (
   `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键，自增',
   `username`    VARCHAR(50)  NOT NULL                COMMENT '登录账号（唯一）',
   `name`        VARCHAR(50)  DEFAULT ''             COMMENT '姓名',

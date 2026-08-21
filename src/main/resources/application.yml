@@ -9,6 +9,15 @@ spring:
   profiles:
     active: dev
 
+  # Flyway 数据库迁移：应用启动时自动执行 classpath:db/migration 下的版本化 SQL
+  # 作用：再也不会出现“忘了跑 init.sql 导致表不存在”的报错
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # 现有库已有 user/product 表但还没有 flyway 版本记录，
+    # 必须设为 true 才能初始化 history 表并接管已有表（空库首次部署不受影响，会正常执行 V1/V2）
+    baseline-on-migrate: true
+
 server:
   # 后端端口，前端 dev 代理 /api -> 8080
   port: 8080

@@ -52,6 +52,19 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway：数据库版本迁移工具，应用启动时自动按版本顺序执行 db/migration 下的 SQL -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!-- Flyway 的 MySQL 支持（Flyway 9.x 起 MySQL 驱动拆分为独立模块，必须单独引入，否则报 Unsupported Database: MySQL 8.0） -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <version>${flyway.version}</version>
+        </dependency>
+
         <!-- Lombok：用注解自动生成 getter/setter/toString 等，减少样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
