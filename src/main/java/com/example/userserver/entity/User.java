@@ -32,7 +32,8 @@ public class User {
     private String email;       // 邮箱
     private Integer age;        // 年龄
     private String gender;      // 性别（男/女/其他）
-    private String address;     // 地址
+    private String address;
+    private String remark;        // 备注     // 地址
 
     // @JsonFormat：指定序列化成 "yyyy-MM-dd HH:mm:ss" 并按东八区展示，
     // 避免默认输出带 T 和毫秒的 ISO 格式（如 2026-08-17T14:36:40.7342886）。
