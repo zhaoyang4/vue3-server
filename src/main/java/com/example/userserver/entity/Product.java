@@ -33,6 +33,8 @@ public class Product {
     private String name;            // 商品名称
     private BigDecimal price;       // 价格
     private LocalDate purchaseDate; // 购买日期
+    private Integer stock;          // 库存数量
+    private Integer version;        // 乐观锁版本号（每次更新 +1）
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createTime;  // 创建时间
