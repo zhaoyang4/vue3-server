@@ -14,9 +14,10 @@ import org.apache.ibatis.annotations.Update;
 
 /**
  * 订单数据访问层。
- * 基础 CRUD 由 BaseMapper<Order> 提供；下面两个是「复杂 SQL」演示：
+ * 基础 CRUD 由 BaseMapper<Order> 提供；下面三个是「复杂 SQL」演示：
  *   1) selectOrderPage —— LEFT JOIN user，把用户名带进订单列表（多表联查 + 分页）
  *   2) decreaseStock   —— 乐观锁扣库存（并发安全，防超卖）
+ *   3) updateStatus    —— CAS 原子更新订单状态（配合状态机，防止非法流转）
  */
 @Mapper
 public interface OrderMapper extends BaseMapper<Order> {
@@ -42,4 +43,14 @@ public interface OrderMapper extends BaseMapper<Order> {
     @Update("UPDATE product SET stock = stock - #{qty}, version = version + 1 " +
             "WHERE id = #{id} AND stock >= #{qty} AND version = #{ver}")
     int decreaseStock(@Param("id") Long id, @Param("qty") int qty, @Param("ver") int ver);
+
+    /**
+     * 订单状态流转（CAS 原子更新）：
+     *   只有当数据库里 status 仍是 #{from} 时才改成 #{to}，返回影响行数。
+     *   影响行数 0 = 状态已被别人改过（并发）→ 上层据此提示重试。
+     *   配合 OrderStatusEnum 的状态机规则，杜绝「待支付」直接跳「已完成」这类非法流转。
+     */
+    @Update("UPDATE `order` SET status = #{to}, update_time = NOW() " +
+            "WHERE id = #{id} AND status = #{from}")
+    int updateStatus(@Param("id") Long id, @Param("from") int from, @Param("to") int to);
 }

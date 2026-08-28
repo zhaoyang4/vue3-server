@@ -65,6 +65,12 @@
             <version>${flyway.version}</version>
         </dependency>
 
+        <!-- 参数校验：@Valid / @NotNull / @DecimalMin 等，配合 GlobalExceptionHandler 返回友好错误 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Lombok：用注解自动生成 getter/setter/toString 等，减少样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

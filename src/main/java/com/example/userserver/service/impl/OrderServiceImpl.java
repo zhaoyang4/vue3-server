@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.userserver.common.BizException;
 import com.example.userserver.dto.CreateOrderDTO;
 import com.example.userserver.entity.Order;
 import com.example.userserver.entity.OrderItem;
 import com.example.userserver.entity.Product;
 import com.example.userserver.entity.User;
+import com.example.userserver.enums.OrderStatusEnum;
 import com.example.userserver.mapper.OrderItemMapper;
 import com.example.userserver.mapper.OrderMapper;
 import com.example.userserver.mapper.ProductMapper;
@@ -145,5 +147,33 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         d.setOrder(vo);
         d.setItems(items);
         return d;
+    }
+
+    @Override
+    public Order getOrder(Long id) {
+        return baseMapper.selectById(id);
+    }
+
+    @Override
+    public boolean changeStatus(Long orderId, int target) {
+        Order order = baseMapper.selectById(orderId);
+        if (order == null) {
+            throw new BizException("订单不存在: " + orderId);
+        }
+        int from = order.getStatus();
+        if (from == target) {
+            return true; // 已是目标状态，幂等返回
+        }
+        // 1) 状态机校验：不在 OrderStatusEnum 声明的流转集合里 → 非法
+        if (!OrderStatusEnum.canTransition(from, target)) {
+            throw new BizException("非法状态流转：" + OrderStatusEnum.descOf(from)
+                    + " → " + OrderStatusEnum.descOf(target));
+        }
+        // 2) CAS 原子更新：只有 DB 里 status 仍是 from 才改，并发被改则影响行数 0
+        int rows = baseMapper.updateStatus(orderId, from, target);
+        if (rows == 0) {
+            throw new BizException("订单状态已被他人修改，请刷新后重试");
+        }
+        return true;
     }
 }
