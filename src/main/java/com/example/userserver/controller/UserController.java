@@ -22,12 +22,12 @@ import java.time.LocalDateTime;
  *   PUT    /api/users/{id}   根据 id 修改
  *   DELETE /api/users/{id}   根据 id 删除
  *
- * @CrossOrigin：允许跨域。开发时前端在 5173、后端在 8080，浏览器会因同源策略拦请求，
- *               加上它（或可配全局 CORS）即可放行。生产环境建议用网关/反向代理代替。
+ * 关于跨域：原先这里挂了 @CrossOrigin（等于对全网放行），已移除。
+ *          现在统一由 config/CorsConfig 全局配置，放行名单来自 app.cors.allowed-origins，
+ *          可用环境变量 CORS_ALLOWED_ORIGINS 覆盖 —— 新增 Controller 不用再操心跨域。
  */
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin
 public class UserController {
 
     // @Resource 按类型注入 UserService 的实现（UserServiceImpl）

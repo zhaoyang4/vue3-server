@@ -1,0 +1,70 @@
+# ============================================================
+# 生产环境（PROD）—— 配置外置的终点：这个文件里【一个敏感值都没有】
+#
+# 规则：${VAR}       = 必填，没设 -> 应用直接启动失败（fail-fast，比连错库好一万倍）
+#       ${VAR:默认}  = 可选，有兜底
+#
+# 启动示例（Linux）：
+#   export SPRING_PROFILES_ACTIVE=prod
+#   export DB_HOST=10.0.0.9  DB_PORT=3306  DB_NAME=vue3_user
+#   export DB_USERNAME=app_user  DB_PASSWORD='强密码'
+#   export JWT_SECRET='至少32位的随机串'
+#   export CORS_ALLOWED_ORIGINS='http://你的域名'
+#   java -jar vue3-server-1.0.0.jar
+#
+# 用 Docker 时这些变量写在 .env / docker-compose.yml 的 environment 里，一样的道理。
+# ============================================================
+
+spring:
+  datasource:
+    # 生产连接串：主机、端口、库名全部外部注入
+    #   useSSL 默认 false（同一内网/容器网络够用），走公网数据库请设 DB_USE_SSL=true
+    #   rewriteBatchedStatements=true -> 批量插入性能优化
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=${DB_USE_SSL:false}&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+    # HikariCP 连接池：生产环境该调的参数
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}       # 最大连接数，按 CPU 与并发量调
+      minimum-idle: ${DB_POOL_MIN:5}             # 最小空闲连接
+      connection-timeout: 30000                  # 拿不到连接的等待上限（毫秒）
+      idle-timeout: 600000                       # 空闲连接回收时间
+      max-lifetime: 1740000                      # 连接最大存活（要小于 MySQL 的 wait_timeout）
+      connection-test-query: SELECT 1
+
+mybatis-plus:
+  configuration:
+    # 生产关闭 SQL 打印：① 减少 IO 开销 ② 防止手机号/卡号等数据被写进日志
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# 生产日志：级别收到 info，并落地到文件（滚动切割，避免磁盘被单个大文件撑爆）
+logging:
+  level:
+    root: info
+    com.example.userserver: ${LOG_LEVEL_APP:info}
+  file:
+    name: ${LOG_FILE:./logs/vue3-server.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 14           # 保留 14 天
+      total-size-cap: 2GB
+
+# 健康检查不暴露内部细节（谁都能访问 /actuator/health，别把库地址泄出去）
+management:
+  endpoint:
+    health:
+      show-details: never
+
+app:
+  cors:
+    # 生产【必填】：只放行你自己的前端域名，绝不要用 *
+    # 如果前端由 Nginx 反向代理同域访问（推荐），这里填前端域名即可，甚至不会触发跨域
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  jwt:
+    # 生产【必填】：至少 32 位随机字符串，泄露等于账号全裸
+    # 生成方法：openssl rand -base64 48
+    secret: ${JWT_SECRET}
+    expire-minutes: ${JWT_EXPIRE_MINUTES:120}

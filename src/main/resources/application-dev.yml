@@ -1,18 +1,33 @@
 # ============================================================
-# 开发环境：连接你本机 MySQL
-# 由 application.yml 里的 spring.profiles.active: dev 默认激活
+# 开发环境（DEV）：连接你本机 MySQL
+# 由 application.yml 里的 spring.profiles.active 默认激活
+#
+# ★ 所有值都写成 ${环境变量:默认值}：
+#   什么都不设 -> 用默认值（和以前完全一样，本地照旧一键启动）
+#   想临时连别的库 -> 设个环境变量就行，不用改文件
+#     PowerShell: $env:DB_HOST="192.168.1.20"; ./mvnw.cmd spring-boot:run
 # ============================================================
 
 spring:
   datasource:
-    # JDBC 连接串：localhost 本机，3306 默认端口，vue3_user 是数据库名
+    # JDBC 连接串：主机、端口、库名全部可被环境变量覆盖
     # 参数说明：
     #   useUnicode/characterEncoding=utf8 -> 中文不乱码
     #   serverTimezone=Asia/Shanghai      -> 时区
     #   useSSL=false                      -> 本地开发关闭 SSL
     #   allowPublicKeyRetrieval=true      -> 允许获取公钥（MySQL 8 默认密码插件需要）
-    url: jdbc:mysql://localhost:3306/vue3_user?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    # 本机 MySQL 的 root 密码
-    password: root123456
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:vue3_user}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    # 本机 MySQL 的 root 密码（仅本地开发可以写默认值，生产绝不写死）
+    password: ${DB_PASSWORD:root123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    # 打印执行的 SQL 到控制台，本地排查问题非常有用
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+logging:
+  level:
+    # 本项目日志设为 debug，能看到更多细节
+    com.example.userserver: debug

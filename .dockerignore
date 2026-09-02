@@ -1,0 +1,17 @@
+# 构建镜像时不拷这些：镜像更小、构建更快
+target
+.git
+.gitignore
+.idea
+*.iml
+.workbuddy
+selftest
+logs
+*.log
+Dockerfile
+.dockerignore
+docker-compose.yml
+.env
+README.md
+DEPLOY.md
+启动说明.txt

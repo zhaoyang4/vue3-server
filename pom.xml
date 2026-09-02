@@ -71,6 +71,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+          Actuator：健康检查与运行指标端点。部署刚需。
+          提供 GET /actuator/health -> {"status":"UP"}
+          用途：docker-compose 的 healthcheck、云负载均衡探活、K8s livenessProbe、上线后自检脚本
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Lombok：用注解自动生成 getter/setter/toString 等，减少样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -87,6 +97,13 @@
     </dependencies>
 
     <build>
+        <!--
+          打包产物固定叫 vue3-server.jar（默认会带版本号 vue3-server-1.0.0.jar）。
+          好处：部署脚本 / Dockerfile / systemd 里写死 vue3-server.jar 即可，
+                以后升版本号不用回头改一堆脚本。
+        -->
+        <finalName>vue3-server</finalName>
+
         <plugins>
             <!-- Spring Boot 打包插件：把项目打成可执行的 fat-jar -->
             <plugin>

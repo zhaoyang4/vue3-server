@@ -1,18 +1,38 @@
 # ============================================================
 # Spring Boot 公共配置（所有环境共享）
-# 环境相关的数据库配置已拆到 application-{env}.yml
+# 环境相关的数据库配置在 application-{env}.yml：dev / sit / prod
+#
+# ★ 可部署的核心原则：配置外置
+#   写法 ${环境变量名:默认值}
+#     - 本地不设任何环境变量 -> 用冒号后面的默认值（保证"本地零配置能跑"）
+#     - 服务器上设了环境变量 -> 环境变量优先（保证"换环境不改代码"）
+#   前端类比：等同于 import.meta.env.VITE_XXX 读 .env 文件，一个道理。
+#
+# ⚠ 注意区分两类配置：
+#   ① Spring 自己的标准属性（server.port、spring.profiles.active 等）
+#      Spring Boot 原生就支持用环境变量覆盖：属性名大写、点换下划线，如 server.port <- SERVER_PORT。
+#      这类直接写字面值即可，不要再套 ${SERVER_PORT:8080}——占位符名和它自身的环境变量映射同名，
+#      容易产生歧义（实测中被外部注入的同名变量意外覆盖过，端口变成 0 起了随机端口，排查很费劲）。
+#   ② 自定义的业务/连接配置（DB_HOST、JWT_SECRET 等 Spring 不认识的名字）
+#      必须自己写 ${VAR:默认值} 才能读到环境变量，见下方与 application-{env}.yml。
 # ============================================================
 
-# 默认激活 dev 环境：本地直接启动就连本地库，无需额外参数
-# 排查其他环境时覆盖它：--spring.profiles.active=sit
+# 默认激活 dev：本地直接启动就连本地库，无需额外参数
+# 服务器上覆盖它：export SPRING_PROFILES_ACTIVE=prod  或  java -jar xxx.jar --spring.profiles.active=prod
 spring:
+  application:
+    name: vue3-server
   profiles:
     active: dev
 
+  # 优雅停机的等待上限：超过这个时间还没处理完的请求会被强制中断
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   # Flyway 数据库迁移：应用启动时自动执行 classpath:db/migration 下的版本化 SQL
-  # 作用：再也不会出现“忘了跑 init.sql 导致表不存在”的报错
+  # 作用：部署到新环境时，只要连上空库，表结构自动建好，再也不用手工跑 init.sql
   flyway:
-    enabled: true
+    enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration
     # 现有库已有 user/product 表但还没有 flyway 版本记录，
     # 必须设为 true 才能初始化 history 表并接管已有表（空库首次部署不受影响，会正常执行 V1/V2）
@@ -20,26 +40,51 @@ spring:
 
 server:
   # 后端端口，前端 dev 代理 /api -> 8080
+  # 换端口不用改这里：启动前设 SERVER_PORT=9000（Spring 原生覆盖），或加参数 --server.port=9000
   port: 8080
+  shutdown: graceful  # 优雅停机：收到停止信号后先处理完在途请求再退出（部署/重启时不丢请求）
 
 mybatis-plus:
-  configuration:
-    # 打印执行的 SQL 到控制台，方便排查；生产环境建议注释掉（性能/安全）
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       # 主键策略：数据库自增（配合表里 id AUTO_INCREMENT）
       id-type: auto
-
-logging:
-  level:
-    # 本项目日志设为 debug，能看到更多细节
-    com.example.userserver: debug
+  # 注意：SQL 打印（log-impl）已下沉到各环境文件
+  #       dev/sit 打印方便排查，prod 关闭（性能 + 避免敏感数据进日志）
 
 # ============================================================
-# 多环境怎么加（不用改本文件）：
-#   1. application-dev.yml   -> 本地开发库（已存在）
-#   2. application-sit.yml   -> 测试环境库，密码用环境变量，别写死
-#   3. application-uat.yml   -> 验收环境库（复制 sit 改地址即可）
-# 切换环境：启动时加 --spring.profiles.active=sit
+# Actuator 健康检查：给运维/容器/负载均衡探活用
+#   GET http://localhost:8080/actuator/health  ->  {"status":"UP"}
+#   docker-compose 的 healthcheck、K8s 的 livenessProbe 都靠它
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: ${HEALTH_SHOW_DETAILS:never}  # prod 别暴露数据库细节
+
+# ============================================================
+# 业务自定义配置（前缀 app），由 AppProperties 类接收
+# ============================================================
+app:
+  cors:
+    # 允许跨域访问的前端地址，多个用英文逗号分隔
+    # 本地默认放行 Vite dev 服务器；生产传真实域名，例如：
+    #   CORS_ALLOWED_ORIGINS=http://120.1.2.3,https://admin.example.com
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  jwt:
+    # 令牌签名密钥。dev 用默认值方便调试；prod 在 application-prod.yml 里改成【必填】环境变量
+    secret: ${JWT_SECRET:dev-only-insecure-secret-please-change-in-prod}
+    # 令牌有效期（分钟）
+    expire-minutes: ${JWT_EXPIRE_MINUTES:120}
+
+# ============================================================
+# 多环境怎么切（不用改本文件）：
+#   application-dev.yml   -> 本地开发库（默认，全部带默认值，零配置可跑）
+#   application-sit.yml   -> 测试环境库（密码走环境变量）
+#   application-prod.yml  -> 生产环境库（地址/端口/账号/密码/JWT 密钥全部必填环境变量）
+# 切换：启动时加 --spring.profiles.active=prod 或设 SPRING_PROFILES_ACTIVE=prod
 # ============================================================

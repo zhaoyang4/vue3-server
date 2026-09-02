@@ -1,0 +1,84 @@
+# ============================================================
+# systemd 服务单元文件（不用 Docker 时的进程守护方案）
+#
+# 它解决什么问题？
+#   直接 java -jar 跑，SSH 一断进程就没了；服务器重启也不会自动拉起。
+#   交给 systemd 后：开机自启 + 崩溃自动重启 + 统一日志（journalctl）。
+#
+# 安装步骤（Linux，root 执行）：
+#   1. 建目录放 jar 和环境变量文件
+#        mkdir -p /opt/vue3-server
+#        上传 target/vue3-server.jar 到 /opt/vue3-server/
+#   2. 建环境变量文件（敏感信息集中放这里，权限 600 只有 root 能读）
+#        vim /etc/vue3-server.env      # 内容见本文件末尾示例
+#        chmod 600 /etc/vue3-server.env
+#   3. 建运行用户（不要用 root 跑应用）
+#        useradd -r -s /sbin/nologin appuser
+#        chown -R appuser:appuser /opt/vue3-server
+#   4. 装服务
+#        cp deploy/vue3-server.service /etc/systemd/system/
+#        systemctl daemon-reload
+#        systemctl enable --now vue3-server
+#   5. 常用命令
+#        systemctl status vue3-server        看状态
+#        systemctl restart vue3-server       重启（发版后执行）
+#        journalctl -u vue3-server -f        实时看日志
+# ============================================================
+
+[Unit]
+Description=vue3-server (Spring Boot backend)
+# 网络就绪后再启动；如果 MySQL 装在同一台机器，加上 mysql.service 更稳
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# 用专用低权限用户运行，被攻破时影响面小
+User=appuser
+Group=appuser
+
+WorkingDirectory=/opt/vue3-server
+
+# ★ 配置外置的落地点：所有密码/密钥都在这个文件里，jar 包本身不含任何敏感信息
+EnvironmentFile=/etc/vue3-server.env
+
+# MaxRAMPercentage：让 JVM 按机器内存的百分比自动定堆大小，换机器不用改参数
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75 -XX:+UseG1GC -Dfile.encoding=UTF-8 -jar /opt/vue3-server/vue3-server.jar
+
+# 优雅停机：先发 SIGTERM 让 Spring 处理完在途请求（配合 server.shutdown=graceful）
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# 挂了就自动重启，间隔 10 秒
+Restart=always
+RestartSec=10
+
+# 日志交给 journald：journalctl -u vue3-server -f 即可查看
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vue3-server
+
+# ---- 简单的安全加固 ----
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/vue3-server/logs
+
+[Install]
+WantedBy=multi-user.target
+
+# ============================================================
+# /etc/vue3-server.env 示例内容（注意：不要写引号，systemd 会把引号当值的一部分）
+# ------------------------------------------------------------
+# SPRING_PROFILES_ACTIVE=prod
+# SERVER_PORT=8080
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_NAME=vue3_user
+# DB_USERNAME=app_user
+# DB_PASSWORD=你的强密码
+# JWT_SECRET=openssl rand -base64 48 生成的随机串
+# CORS_ALLOWED_ORIGINS=http://你的域名
+# LOG_FILE=/opt/vue3-server/logs/vue3-server.log
+# ============================================================
