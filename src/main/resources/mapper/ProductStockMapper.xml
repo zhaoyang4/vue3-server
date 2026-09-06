@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  ============================================================================
+  ProductStockMapper.xml : 商品库存预警的自定义 SQL（XML 写法）
+  ============================================================================
+  对应接口：com.example.userserver.mapper.ProductStockMapper
+  绑定规则：namespace 必须 = Mapper 接口全限定名
+            select 的 id  必须 = 接口里的方法名
+            resultType    = 每一行映射成的 Java 类型（这里用 VO）
+
+  业务：把 product 表 LEFT JOIN order_item（订单明细），按商品聚合，
+        用 CASE 算出「安全 / 预警 / 缺货」状态，用 GREATEST 算出「建议补货数量」。
+
+  ★ 两个 XML 写法注意点：
+    1. 注释里不能出现两个连续的减号字符（否则报 SAXParseException），
+       所以本文件的分隔线一律用等号，不用减号。
+    2. SQL 里的小于号必须写成 &lt; （大于号 &gt;），否则会破坏 XML 标签结构。
+  ============================================================================
+-->
+<mapper namespace="com.example.userserver.mapper.ProductStockMapper">
+
+    <select id="selectStockAlert" resultType="com.example.userserver.vo.ProductStockVO">
+        SELECT
+            p.id                                            AS productId,
+            p.name                                          AS productName,
+            p.price                                         AS price,
+            p.stock                                         AS stock,
+            /* 累计销量：没卖过的商品 LEFT JOIN 后 quantity 为 NULL，用 COALESCE 兜底成 0 */
+            COALESCE(SUM(oi.quantity), 0)                   AS totalSold,
+            /* 累计销售额：同理兜底成 0 */
+            COALESCE(SUM(oi.subtotal), 0)                   AS totalAmount,
+            /* 库存状态：用 CASE 三段式判断 */
+            CASE
+                WHEN p.stock &lt;= 0                THEN '缺货'
+                WHEN p.stock &lt; #{threshold}     THEN '预警'
+                ELSE '安全'
+            END                                             AS stockStatus,
+            /* 建议补货量：只有预警/缺货才需要补，补到 target 为止；GREATEST 防止出现负数 */
+            CASE
+                WHEN p.stock &lt; #{threshold}     THEN GREATEST(#{target} - p.stock, 0)
+                ELSE 0
+            END                                             AS suggestRestock
+        FROM product p
+        LEFT JOIN order_item oi ON p.id = oi.product_id
+        <!-- 动态条件：onlyAlert 为真才加 WHERE，只筛预警/缺货；为假则查全部 -->
+        <where>
+            <if test="onlyAlert">
+                p.stock &lt; #{threshold}
+            </if>
+        </where>
+        GROUP BY p.id, p.name, p.price, p.stock
+        ORDER BY p.stock ASC
+    </select>
+
+</mapper>

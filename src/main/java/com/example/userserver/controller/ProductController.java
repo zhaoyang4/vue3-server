@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.userserver.common.Result;
 import com.example.userserver.entity.Product;
 import com.example.userserver.service.ProductService;
+import com.example.userserver.vo.ProductStockVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 商品接口控制器（Controller 层）。
@@ -41,6 +43,12 @@ public class ProductController {
         if (product.getPurchaseDate() == null) {
             return Result.error("购买日期不能为空");
         }
+        // 库存校验：不传按 0 处理（DB 默认 100，这里显式兜底为 0，避免"没填却莫名有 100 件"）
+        if (product.getStock() == null) {
+            product.setStock(0);
+        } else if (product.getStock() < 0) {
+            return Result.error("库存不能为负数");
+        }
         // 手动维护时间字段
         product.setCreateTime(LocalDateTime.now());
         product.setUpdateTime(LocalDateTime.now());
@@ -64,11 +72,30 @@ public class ProductController {
         return Result.success(productService.getById(id));
     }
 
+    /**
+     * 商品库存预警看板：自定义 SQL（product LEFT JOIN order_item + CASE 算状态）。
+     * 这条接口挂在 /api/products 下面，属于「商品模块」的延伸功能。
+     *
+     * @param threshold  预警阈值，默认 10（库存低于它即预警/缺货）
+     * @param target     目标库存，默认 50（建议补货量 = target - 当前库存）
+     * @param onlyAlert  默认 true，只返回预警/缺货商品；传 false 返回全部（带状态列）
+     */
+    @GetMapping("/stock-alert")
+    public Result<List<ProductStockVO>> stockAlert(
+            @RequestParam(defaultValue = "10") int threshold,
+            @RequestParam(defaultValue = "50") int target,
+            @RequestParam(defaultValue = "true") boolean onlyAlert) {
+        return Result.success(productService.stockAlert(threshold, target, onlyAlert));
+    }
+
     /** 修改商品 */
     @PutMapping("/{id}")
     public Result<Product> update(@PathVariable Long id, @RequestBody Product product) {
         if (product.getPrice() != null && product.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             return Result.error("价格不能为负数");
+        }
+        if (product.getStock() != null && product.getStock() < 0) {
+            return Result.error("库存不能为负数");
         }
         product.setId(id);                  // 必须带上 id，MyBatis-Plus 才知道改哪条
         product.setUpdateTime(LocalDateTime.now());

@@ -5,8 +5,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.userserver.entity.Product;
 import com.example.userserver.mapper.ProductMapper;
+import com.example.userserver.mapper.ProductStockMapper;
 import com.example.userserver.service.ProductService;
+import com.example.userserver.vo.ProductStockVO;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * 商品业务实现类。
@@ -15,6 +20,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> implements ProductService {
+
+    // 库存预警专用 Mapper（自定义 XML SQL）。这里注入后即可在 stockAlert 里调用。
+    @Resource
+    private ProductStockMapper productStockMapper;
 
     @Override
     public Page<Product> pageQuery(long current, long size, String keyword) {
@@ -31,5 +40,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
 
         // 3) 返回分页结果
         return baseMapper.selectPage(page, wrapper);
+    }
+
+    @Override
+    public List<ProductStockVO> stockAlert(int threshold, int target, boolean onlyAlert) {
+        // 库存预警是「自定义 SQL」查询，交给专用的 ProductStockMapper（SQL 写在 XML 里）
+        return productStockMapper.selectStockAlert(threshold, target, onlyAlert);
     }
 }
