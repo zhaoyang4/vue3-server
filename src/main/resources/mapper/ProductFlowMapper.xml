@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  商品销售流水（自定义 SQL，XML 实现）
+  ============================================================
+  order_item JOIN `order` JOIN user：
+    order_item 存「买了几个 / 成交单价 / 小计」（下单快照），
+    `order` 补「订单号 / 状态 / 下单时间」，user 补「谁买的」。
+  两条 SQL：
+    selectProductFlows   成交明细分页（支持订单号/买家模糊）
+    selectProductSummary 聚合汇总（销量 / 销售额 / 订单数）
+  ============================================================
+  注意：XML 注释里不能出现连续的减号，分隔线一律用等号。
+-->
+<mapper namespace="com.example.userserver.mapper.ProductFlowMapper">
+
+    <!-- 某商品的分页成交明细 -->
+    <select id="selectProductFlows" resultType="com.example.userserver.vo.ProductFlowVO">
+        SELECT
+            o.id            AS orderId,
+            o.order_no      AS orderNo,
+            o.user_id       AS userId,
+            u.name          AS userName,
+            u.username       AS userAccount,
+            oi.quantity      AS quantity,
+            oi.product_price AS productPrice,
+            oi.subtotal     AS subtotal,
+            o.status        AS orderStatus,
+            o.create_time   AS createTime
+        FROM order_item oi
+        JOIN `order` o ON oi.order_id = o.id
+        LEFT JOIN user u ON o.user_id = u.id
+        <where>
+            oi.product_id = #{productId}
+            <if test="keyword != null and keyword != ''">
+                AND (o.order_no LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY o.id DESC
+    </select>
+
+    <!-- 某商品的聚合汇总（一条 SQL 算三个数） -->
+    <select id="selectProductSummary" resultType="com.example.userserver.vo.ProductSoldSummaryVO">
+        SELECT
+            COUNT(DISTINCT oi.order_id)      AS orderCount,
+            COALESCE(SUM(oi.quantity), 0)    AS totalQuantity,
+            COALESCE(SUM(oi.subtotal), 0)    AS totalAmount
+        FROM order_item oi
+        WHERE oi.product_id = #{productId}
+    </select>
+
+</mapper>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  订单多条件分页查询（自定义 SQL，XML 实现）
+  ============================================================
+  原先是 @Select 注解 + Wrapper 拼条件，现在改写为 XML 动态 SQL，
+  支持三种过滤：
+    keyword  模糊匹配 订单号 / 用户姓名 / 用户账号
+    status   订单状态精确过滤（0 待支付 1 已支付 2 已发货 3 已完成 4 已取消）
+    userId   指定用户的订单（用户详情页「购买历史」）
+  列名用 AS 驼峰别名，不依赖下划线转驼峰配置。
+  ============================================================
+  注意：XML 注释里不能出现连续的减号，分隔线一律用等号。
+-->
+<mapper namespace="com.example.userserver.mapper.OrderMapper">
+
+    <select id="selectOrderPage" resultType="com.example.userserver.vo.OrderVO">
+        SELECT
+            o.id           AS id,
+            o.order_no     AS orderNo,
+            o.user_id      AS userId,
+            o.total_amount AS totalAmount,
+            o.status       AS status,
+            o.create_time  AS createTime,
+            u.name         AS userName,
+            u.username     AS userAccount
+        FROM `order` o
+        LEFT JOIN user u ON o.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (o.order_no LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.name LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.username LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND o.status = #{status}
+            </if>
+            <if test="userId != null">
+                AND o.user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY o.id DESC
+    </select>
+
+</mapper>

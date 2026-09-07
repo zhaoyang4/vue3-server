@@ -113,15 +113,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public IPage<OrderVO> pageQuery(long current, long size, String keyword) {
+    public IPage<OrderVO> pageQuery(long current, long size, String keyword, Integer status, Long userId) {
+        // 自定义 XML SQL：LEFT JOIN user + 动态条件（订单号/用户名/账号模糊、状态、用户ID）
         Page<OrderVO> page = new Page<>(current, size);
-        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
-        if (keyword != null && !keyword.isBlank()) {
-            wrapper.like(Order::getOrderNo, keyword);
-        }
-        wrapper.orderByDesc(Order::getId);
-        // selectOrderPage 内部 LEFT JOIN user 把 userName 带出来
-        return baseMapper.selectOrderPage(page, wrapper);
+        return baseMapper.selectOrderPage(page, keyword, status, userId);
     }
 
     @Override

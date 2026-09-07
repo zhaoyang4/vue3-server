@@ -1,38 +1,37 @@
 package com.example.userserver.mapper;
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.userserver.entity.Order;
 import com.example.userserver.vo.OrderVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 /**
  * 订单数据访问层。
- * 基础 CRUD 由 BaseMapper<Order> 提供；下面三个是「复杂 SQL」演示：
- *   1) selectOrderPage —— LEFT JOIN user，把用户名带进订单列表（多表联查 + 分页）
- *   2) decreaseStock   —— 乐观锁扣库存（并发安全，防超卖）
- *   3) updateStatus    —— CAS 原子更新订单状态（配合状态机，防止非法流转）
+ * 基础 CRUD 由 BaseMapper<Order> 提供；下面是「复杂 SQL」演示：
+ *   1) selectOrderPage  —— LEFT JOIN user 的多条件分页（自定义 SQL，XML 实现，
+ *                          支持 订单号/用户名/账号 模糊 + 状态 + 用户ID 过滤）
+ *   2) decreaseStock    —— 乐观锁扣库存（并发安全，防超卖）
+ *   3) updateStatus     —— CAS 原子更新订单状态（配合状态机，防止非法流转）
  */
 @Mapper
 public interface OrderMapper extends BaseMapper<Order> {
 
     /**
-     * 订单列表分页查询（LEFT JOIN user）。
-     * ${ew.customSqlSegment} 是 MyBatis-Plus 占位符，会被替换为 Wrapper 生成的 WHERE 条件。
-     * 列名用 AS 直接取驼峰别名（id→id, order_no→orderNo…），不依赖下划线转驼峰配置。
-     * 分页由 MybatisPlusConfig 里的分页插件自动加 LIMIT 与 COUNT。
+     * 订单列表分页查询（LEFT JOIN user，XML 实现：resources/mapper/OrderMapper.xml）。
+     *
+     * @param keyword  模糊匹配 订单号 / 用户姓名 / 用户账号（三者满足其一，可空）
+     * @param status   订单状态精确过滤（可空 = 不过滤）
+     * @param userId   指定用户的订单（用户详情页的「购买历史」用它）
      */
-    @Select("SELECT o.id AS id, o.order_no AS orderNo, o.user_id AS userId, " +
-            "o.total_amount AS totalAmount, o.status AS status, o.create_time AS createTime, " +
-            "u.name AS userName " +
-            "FROM `order` o LEFT JOIN user u ON o.user_id = u.id ${ew.customSqlSegment}")
-    IPage<OrderVO> selectOrderPage(Page<OrderVO> page, @Param(Constants.WRAPPER) Wrapper<Order> wrapper);
+    IPage<OrderVO> selectOrderPage(
+            Page<OrderVO> page,
+            @Param("keyword") String keyword,
+            @Param("status") Integer status,
+            @Param("userId") Long userId);
 
     /**
      * 乐观锁扣减库存：

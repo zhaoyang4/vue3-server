@@ -1,9 +1,11 @@
 package com.example.userserver.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.userserver.common.Result;
 import com.example.userserver.entity.User;
 import com.example.userserver.service.UserService;
+import com.example.userserver.vo.UserBalanceVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,11 +50,7 @@ public class UserController {
         return Result.success(user);     // 返回带主键的新对象
     }
 
-    /**
-     * 分页查询用户列表。
-     * @RequestParam 取 URL 查询参数，如 /api/users?current=1&size=10&keyword=张
-     * defaultValue 给默认值，required=false 表示可省略。
-     */
+    /** 分页查询用户列表。 */
     @GetMapping
     public Result<Page<User>> list(
             @RequestParam(defaultValue = "1") long current,
@@ -60,6 +58,18 @@ public class UserController {
             @RequestParam(required = false) String keyword) {
         Page<User> page = userService.pageQuery(current, size, keyword);
         return Result.success(page);
+    }
+
+    /**
+     * 分页查询用户 + 余额（自定义 SQL：user LEFT JOIN account）。
+     * 用户管理页的列表直接带出每个人的账户余额，未开户的用户显示 0。
+     */
+    @GetMapping("/with-balance")
+    public Result<IPage<UserBalanceVO>> listWithBalance(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            @RequestParam(required = false) String keyword) {
+        return Result.success(userService.pageQueryWithBalance(current, size, keyword));
     }
 
     /** 根据 id 查询单个用户（用于"修改"时回显数据） */

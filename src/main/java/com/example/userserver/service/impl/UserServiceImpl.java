@@ -1,11 +1,15 @@
 package com.example.userserver.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.userserver.entity.User;
+import com.example.userserver.mapper.UserBalanceMapper;
 import com.example.userserver.mapper.UserMapper;
 import com.example.userserver.service.UserService;
+import com.example.userserver.vo.UserBalanceVO;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 /**
@@ -16,6 +20,9 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    @Resource
+    private UserBalanceMapper userBalanceMapper;
 
     @Override
     public Page<User> pageQuery(long current, long size, String keyword) {
@@ -48,5 +55,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             wrapper.ne(User::getId, excludeId);
         }
         return baseMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public IPage<UserBalanceVO> pageQueryWithBalance(long current, long size, String keyword) {
+        // 自定义 SQL（XML）：user LEFT JOIN account，把余额直接带进列表
+        Page<UserBalanceVO> page = new Page<>(current, size);
+        return userBalanceMapper.selectUserBalancePage(page, keyword);
     }
 }

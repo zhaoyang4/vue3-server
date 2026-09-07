@@ -36,13 +36,21 @@ public class OrderController {
         }
     }
 
-    /** 订单列表（LEFT JOIN user，分页） */
+    /**
+     * 订单列表（LEFT JOIN user，分页，多条件）。
+     *
+     * @param keyword 模糊匹配 订单号 / 用户姓名 / 用户账号（可空）
+     * @param status  订单状态过滤（可空 = 全部；0待支付 1已支付 2已发货 3已完成 4已取消）
+     * @param userId  指定用户的订单（用户详情页「购买历史」用它；可空）
+     */
     @GetMapping
     public Result<IPage<OrderVO>> list(
             @RequestParam(defaultValue = "1") long current,
             @RequestParam(defaultValue = "10") long size,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(orderService.pageQuery(current, size, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Long userId) {
+        return Result.success(orderService.pageQuery(current, size, keyword, status, userId));
     }
 
     /** 订单详情（含商品明细） */

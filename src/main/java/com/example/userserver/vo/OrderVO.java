@@ -18,7 +18,8 @@ public class OrderVO {
     private Long id;
     private String orderNo;
     private Long userId;
-    private String userName;       // 左联 user 得到
+    private String userName;       // 左联 user 得到（姓名）
+    private String userAccount;    // 左联 user 得到（登录账号）
     private BigDecimal totalAmount;
     private Integer status;        // 0待支付 1已支付 2已取消
 

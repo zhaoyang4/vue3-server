@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  用户余额列表（自定义 SQL，XML 实现）
+  ============================================================
+  user LEFT JOIN account：余额存在独立的 account 表，
+  左联后每个用户带出自己的 balance；还没开户的用户用
+  COALESCE 兜底为 0，避免列表里出现 null。
+  ============================================================
+  注意：XML 注释里不能出现连续的减号，分隔线一律用等号。
+-->
+<mapper namespace="com.example.userserver.mapper.UserBalanceMapper">
+
+    <select id="selectUserBalancePage" resultType="com.example.userserver.vo.UserBalanceVO">
+        SELECT
+            u.id          AS userId,
+            u.username    AS username,
+            u.name        AS name,
+            u.phone       AS phone,
+            u.email       AS email,
+            u.age         AS age,
+            u.gender      AS gender,
+            u.address     AS address,
+            COALESCE(a.balance, 0) AS balance,
+            u.create_time AS createTime
+        FROM user u
+        LEFT JOIN account a ON a.user_id = u.id AND a.deleted = 0
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (u.username LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.name LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY u.id DESC
+    </select>
+
+</mapper>

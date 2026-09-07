@@ -1,8 +1,11 @@
 package com.example.userserver.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.userserver.entity.Product;
+import com.example.userserver.vo.ProductFlowVO;
+import com.example.userserver.vo.ProductSoldSummaryVO;
 import com.example.userserver.vo.ProductStockVO;
 
 import java.util.List;
@@ -33,4 +36,18 @@ public interface ProductService extends IService<Product> {
      * @return 库存预警视图列表，按库存升序（最缺的排最前）
      */
     List<ProductStockVO> stockAlert(int threshold, int target, boolean onlyAlert);
+
+    /**
+     * 某商品的销售流水分页（自定义 XML SQL：
+     * order_item JOIN `order` JOIN user，一行 = 一次成交）。
+     *
+     * @param productId 商品ID
+     * @param keyword   可选，模糊匹配 订单号 / 买家姓名 / 买家账号
+     */
+    IPage<ProductFlowVO> productFlows(long current, long size, Long productId, String keyword);
+
+    /**
+     * 某商品的销售汇总（聚合 SQL）：累计销量 / 累计销售额 / 成交订单数。
+     */
+    ProductSoldSummaryVO productSoldSummary(Long productId);
 }

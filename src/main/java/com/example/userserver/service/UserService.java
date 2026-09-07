@@ -1,8 +1,10 @@
 package com.example.userserver.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.userserver.entity.User;
+import com.example.userserver.vo.UserBalanceVO;
 
 /**
  * 用户业务接口。
@@ -28,4 +30,10 @@ public interface UserService extends IService<User> {
      * @param excludeId 修改时要排除自身 id（自己改自己时不算重复）
      */
     boolean usernameExists(String username, Long excludeId);
+
+    /**
+     * 分页查询用户 + 余额（自定义 SQL：user LEFT JOIN account）。
+     * 用户管理页直接在列表里看到每个人的账户余额。
+     */
+    IPage<UserBalanceVO> pageQueryWithBalance(long current, long size, String keyword);
 }

@@ -1,9 +1,12 @@
 package com.example.userserver.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.userserver.common.Result;
 import com.example.userserver.entity.Product;
 import com.example.userserver.service.ProductService;
+import com.example.userserver.vo.ProductFlowVO;
+import com.example.userserver.vo.ProductSoldSummaryVO;
 import com.example.userserver.vo.ProductStockVO;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -64,6 +67,30 @@ public class ProductController {
             @RequestParam(required = false) String keyword) {
         Page<Product> page = productService.pageQuery(current, size, keyword);
         return Result.success(page);
+    }
+
+    /**
+     * 某商品的销售流水（自定义 XML SQL：order_item JOIN order JOIN user）。
+     * 商品详情页的「流水情况」表格用它。
+     *
+     * @param id       商品ID（路径参数）
+     * @param keyword  可选，模糊匹配 订单号 / 买家姓名 / 买家账号
+     */
+    @GetMapping("/{id}/flows")
+    public Result<IPage<ProductFlowVO>> flows(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            @RequestParam(required = false) String keyword) {
+        return Result.success(productService.productFlows(current, size, id, keyword));
+    }
+
+    /**
+     * 某商品的销售汇总（聚合 SQL）：累计销量 / 累计销售额 / 成交订单数。
+     */
+    @GetMapping("/{id}/sold-summary")
+    public Result<ProductSoldSummaryVO> soldSummary(@PathVariable Long id) {
+        return Result.success(productService.productSoldSummary(id));
     }
 
     /** 根据 id 查询单个商品（用于"修改"时回显） */
